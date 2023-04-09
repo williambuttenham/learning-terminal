@@ -1,3 +1,5 @@
+// OpenSCAD version 2021.01 
+
 // Library for raspberry pi model: https://github.com/RigacciOrg/openscad-rpi-library
 include <common\openscad-rpi-library-master\openscad-rpi-library-master\misc_boards.scad>
 
