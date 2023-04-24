@@ -2,6 +2,8 @@
 
 ## Supported Versions
 
+No support currently until the server software is added.
+
 | Version | Supported          |
 | ------- | ------------------ |
 | 0.0   | :x:                |
