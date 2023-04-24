@@ -2,200 +2,274 @@
 
 // Library for raspberry pi model: https://github.com/RigacciOrg/openscad-rpi-library
 include <common\openscad-rpi-library-master\openscad-rpi-library-master\misc_boards.scad>
+// https://danielupshaw.com/openscad-rounded-corners/
+include <common\roundedcube.scad>
 
-screen_width = 155;
-screen_height = 90;
+$fn = 70;
+nozzle_diameter = 0.4;
+screen_viewport_width = 154.25;
+screen_viewport_height = 86.5;
+screen_width = 165;
+screen_height = 102;
 screen_screw_height = 3.7;
 screen_body_height = 9.05;
-border_width = 10;
+border_width = 8.5;
+screen_button_border = 15;
 mx_width = 14;
 mx_columns = 8;
-mx_rows = 1;
 key_width = 19.05;
-key_spacing = key_width-mx_width;
-tablet_width = screen_width + border_width*2;
-tablet_height = screen_height + border_width*3 + mx_width;
 cherry_plate_thickness = 1.5;
-case_wall_thickness = 2;
-// case_depth = 20;
-midplate_mount_height = case_wall_thickness+screen_screw_height+screen_body_height;
-case_depth = case_wall_thickness+26+screen_body_height+case_wall_thickness;
+mx_rows = 1;
 case_lid_lip = 8;
+lip_overlap = 5;
 screw_mount_width = 8;
 midplate_tab_width = 10;
-midplate_tab_height = case_wall_thickness;
-midplate_tab_depth = case_wall_thickness/2;
+heatset_insert_diameter = 3.7;
+heatset_insert_height = 5.7;
+heatset_bolt_diameter = 3;
 exploded = true;
+handle_diameter = 10;
+
+magic_midplate_screw_height = 12.3;
+
+print_clearance = nozzle_diameter/2;
+screen_face_width = screen_viewport_width+print_clearance;
+screen_face_height = screen_viewport_height+print_clearance;
+key_spacing = key_width-mx_width;
+mx_module_width = (mx_width+key_spacing)*mx_columns;
+tablet_width = screen_face_width + border_width*2;
+tablet_height = screen_face_height + border_width*2 + ((mx_width+key_spacing)*mx_rows) + screen_button_border;
+wall_thickness = nozzle_diameter*5;
+midplate_mount_height = wall_thickness/2+screen_screw_height+screen_body_height;
+case_depth = wall_thickness+25+screen_body_height+wall_thickness;
+midplate_tab_height = wall_thickness;
+midplate_tab_depth = wall_thickness/2;
+body_corner_radius = wall_thickness;
+face_screen_height_offset = border_width+((mx_width+key_spacing)*mx_rows)+screen_button_border;
+midplate_height = screen_face_height + border_width*2 + screw_mount_width +wall_thickness;
+midplate_screw_height = face_screen_height_offset-magic_midplate_screw_height-screw_mount_width;
 
 module face(args) {
+    mx_center_offset = (tablet_width-wall_thickness-wall_thickness)/2-(mx_module_width)/2;
     difference() {
-        square(size=[tablet_width, tablet_height]);
-
-        // Screen border
-        translate([border_width, border_width*2+ mx_width, 0])
-            square(size=[screen_width, screen_height]);
-        
+        cube(size=[tablet_width-wall_thickness-wall_thickness, tablet_height-wall_thickness-wall_thickness, wall_thickness]);
+        // Screen viewport
+        translate([7, face_screen_height_offset-wall_thickness, -wall_thickness])
+            cube(size=[screen_face_width, screen_face_height, wall_thickness*2]);
         // Hole for mx grid
-        translate([border_width, border_width, 0])
-            square(size=[key_spacing+(mx_width+key_spacing)*mx_columns, key_spacing+(mx_width+key_spacing)*mx_rows]);
+        translate([mx_center_offset, border_width-wall_thickness, -wall_thickness])
+            cube(size=[mx_module_width, (mx_width+key_spacing)*mx_rows, wall_thickness*2]);
 
+    }
+    translate([mx_center_offset, border_width-wall_thickness, 0])
+        mx_grid(mx_columns, mx_rows);
+}
+
+module mx_grid(x, y) {
+    difference() {
+        cube(size=[(mx_width+key_spacing)*x, (mx_width+key_spacing)*y, cherry_plate_thickness]);
+
+        for (i=[0:x-1]) {
+            for (j=[0:y-1]) {
+                translate([key_spacing/2+(mx_width+key_spacing)*i, key_spacing/2-(mx_width+key_spacing)*j, -cherry_plate_thickness])
+                    cube(size=[ mx_width, mx_width, cherry_plate_thickness*2]);
+            }
+        }
     }
 }
 
+module simpleHandle(args) {
+    difference() {
+        union(){
+            translate([body_corner_radius, tablet_height-body_corner_radius, case_depth/2-(handle_diameter+wall_thickness+wall_thickness)/2])
+                roundedcube(size=[ handle_diameter, handle_diameter*2+wall_thickness+wall_thickness+body_corner_radius, handle_diameter+wall_thickness+wall_thickness], radius=body_corner_radius);
+            translate([tablet_width-handle_diameter-body_corner_radius, tablet_height-body_corner_radius, case_depth/2-(handle_diameter+wall_thickness+wall_thickness)/2])
+                roundedcube(size=[ handle_diameter, handle_diameter*2+wall_thickness+wall_thickness+body_corner_radius, handle_diameter+wall_thickness+wall_thickness], radius=body_corner_radius);
+        }
+        translate([0, tablet_height+handle_diameter*1.5+wall_thickness, case_depth/2])
+            rotate([0, 90, 0])
+                cylinder(d=handle_diameter, h=tablet_width);
+    }
+}
 
-module mx_grid(x, y) {
-    linear_extrude(height=cherry_plate_thickness) {
-        difference() {
-            square(size=[key_spacing+(mx_width+key_spacing)*x, key_spacing+(mx_width+key_spacing)*y]);
+module screw_mount (screw_mount_height=midplate_mount_height) {
+    difference() {
+        cube(size=[screw_mount_width, screw_mount_width, screw_mount_height]);
+        translate([screw_mount_width/2, screw_mount_width/2, screw_mount_height-heatset_insert_height])
+            cylinder(d=heatset_insert_diameter, h=heatset_insert_height);
+    }
+}
 
-            for (i=[0:x-1]) {
-                for (j=[0:y-1]) {
-                    translate([key_spacing+(mx_width+key_spacing)*i, key_spacing+(mx_width+key_spacing)*j, 0])
-                        mxMount();
+module body(handle=true, display_sides=true) {
+    lid_lip_angle = 32;
+    difference() {
+        union() {
+            translate([wall_thickness, wall_thickness, 0])
+                face();
+            // Midplate screw mounts
+            translate([wall_thickness, midplate_screw_height, 0]){
+                screw_mount();
+                translate([tablet_width-screw_mount_width-wall_thickness*2, 0, 0])
+                    screw_mount();
+            }
+            // lid side rails
+            difference() {
+                translate([wall_thickness, wall_thickness+screw_mount_width, case_depth-wall_thickness*2])
+                    cube(size=[wall_thickness, tablet_height-wall_thickness*2-lip_overlap*2-screw_mount_width, wall_thickness]);
+                translate([wall_thickness, wall_thickness+screw_mount_width, case_depth-wall_thickness*2])
+                    rotate([0, lid_lip_angle, 0])
+                        cube(size=[wall_thickness, tablet_height-wall_thickness*2-lip_overlap*2-screw_mount_width, wall_thickness*2]);
+            }
+            translate([tablet_width-wall_thickness, wall_thickness+screw_mount_width+tablet_height-wall_thickness*2-lip_overlap*2-screw_mount_width, case_depth-wall_thickness*2]){
+                difference() {
+                    rotate([0, 0, 180])
+                        cube(size=[wall_thickness, tablet_height-wall_thickness*2-lip_overlap*2-screw_mount_width, wall_thickness]);
+                    rotate([0, lid_lip_angle, 180])
+                        cube(size=[wall_thickness, tablet_height-wall_thickness*2-lip_overlap*2-screw_mount_width, wall_thickness*2]);
+            }}
+            // bottom rail
+            translate([(tablet_width-wall_thickness*2-screw_mount_width*2)+(wall_thickness+screw_mount_width), wall_thickness, case_depth-wall_thickness*2]){
+                difference() {
+                    rotate([0, 0, 90])
+                        cube(size=[wall_thickness, tablet_width-wall_thickness*2-screw_mount_width*2, wall_thickness]);
+                    rotate([0, lid_lip_angle, 90])
+                        cube(size=[wall_thickness, tablet_width-wall_thickness*2-screw_mount_width*2, wall_thickness*2]);
+            }}
+            // top rail
+            translate([wall_thickness*4, tablet_height-wall_thickness, case_depth-wall_thickness*3-print_clearance]){
+                difference() {
+                    rotate([0, 0, -90])
+                        cube(size=[wall_thickness, tablet_width-wall_thickness*8, wall_thickness]);
+                    rotate([0, lid_lip_angle, -90])
+                        cube(size=[wall_thickness, tablet_width-wall_thickness*8, wall_thickness*2]);
+            }}
+            // translate([tablet_width-wall_thickness*2, wall_thickness+screw_mount_width, case_depth-wall_thickness*2])
+            //     cube(size=[wall_thickness, tablet_height-wall_thickness*2-lip_overlap*2-screw_mount_width, wall_thickness]);
+            // Case sides
+            if(display_sides == true) {
+                difference() {
+                    roundedcube(size=[tablet_width, tablet_height, case_depth], radius=body_corner_radius);
+                    translate([wall_thickness, wall_thickness, 0])
+                        cube(size=[tablet_width-wall_thickness*2, tablet_height-wall_thickness*2, case_depth-wall_thickness]);
+                    // Case lid lip
+                    translate([wall_thickness, wall_thickness, 0])
+                        cube(size=[tablet_width-wall_thickness*2, tablet_height-wall_thickness*2-lip_overlap, case_depth+1]);
+                    translate([wall_thickness, wall_thickness, case_depth-wall_thickness])
+                        cube(size=[tablet_width-wall_thickness*2, tablet_height-wall_thickness*2-lip_overlap, wall_thickness+1]);
+                    // Midplate tab holes
+                    translate([wall_thickness, tablet_height-midplate_tab_depth-wall_thickness/2, midplate_mount_height])
+                        cube(size=[midplate_tab_width+print_clearance, midplate_tab_depth+print_clearance, midplate_tab_height+print_clearance]);
+                    translate([tablet_width-wall_thickness-10-print_clearance, tablet_height-midplate_tab_depth-wall_thickness/2, midplate_mount_height])
+                        cube(size=[midplate_tab_width+print_clearance, midplate_tab_depth+print_clearance, midplate_tab_height+print_clearance]);
                 }
             }
         }
+        // Set screen into face
+        translate([wall_thickness-print_clearance, face_screen_height_offset-11, wall_thickness/2])
+            cube(size=[screen_width+print_clearance*2, screen_height+print_clearance*2, screen_body_height]);
     }
-}
-
-module mxMount(args) {
-    square(size=[ mx_width, mx_width]);
-}
-
-module body(args) {
-    linear_extrude(height=case_wall_thickness)
-        face();
-        translate([border_width, border_width, 0])
-    mx_grid(mx_columns, mx_rows);
-    // Case sides
-    difference() {
-        difference() {
-            cube(size=[tablet_width, tablet_height, case_depth]);
-            translate([case_wall_thickness, case_wall_thickness, 0])
-                cube(size=[tablet_width-case_wall_thickness*2, tablet_height-case_wall_thickness*2, case_depth]);
-            // Midplate tab holes
-            translate([case_wall_thickness, tablet_height-midplate_tab_depth-case_wall_thickness/2, midplate_mount_height+case_wall_thickness])
-                cube(size=[midplate_tab_width, midplate_tab_depth, midplate_tab_height]);
-            translate([tablet_width-case_wall_thickness-10, tablet_height-midplate_tab_depth-case_wall_thickness/2, midplate_mount_height+case_wall_thickness])
-                cube(size=[midplate_tab_width, midplate_tab_depth, midplate_tab_height]);
-        }
-    }
-    
-    // Case lid lip
-    translate([0, tablet_height-case_lid_lip, case_depth])
-        linear_extrude(height=case_wall_thickness)
-            square(size=[tablet_width, case_lid_lip]);
     // Lid screw mounts
-    translate([0, case_wall_thickness, 0])
-        linear_extrude(height=case_depth)
-            difference() {            
-                square(size=[screw_mount_width, screw_mount_width]);
-                translate([screw_mount_width/2, screw_mount_width/2, 0])
-                    circle(d=3);
-            }
-    translate([tablet_width-screw_mount_width, case_wall_thickness, 0])
-        linear_extrude(height=case_depth)
-            difference() {            
-                square(size=[screw_mount_width, screw_mount_width]);
-                translate([screw_mount_width/2, screw_mount_width/2, 0])
-                    circle(d=3);
-            }
-    // Midplate screw mounts
-    translate([0, case_wall_thickness+border_width+mx_width, 0])
-        linear_extrude(height=midplate_mount_height)
-            difference() {            
-                square(size=[screw_mount_width, screw_mount_width]);
-                translate([screw_mount_width/2, screw_mount_width/2, 0])
-                    circle(d=3);
-            }
-    translate([tablet_width-screw_mount_width, case_wall_thickness+border_width+mx_width, 0])
-        linear_extrude(height=midplate_mount_height)
-            difference() {            
-                square(size=[screw_mount_width, screw_mount_width]);
-                translate([screw_mount_width/2, screw_mount_width/2, 0])
-                    circle(d=3);
-            }
+    translate([wall_thickness, wall_thickness, 0]){
+        screw_mount(case_depth-wall_thickness);
+        translate([tablet_width-screw_mount_width-wall_thickness*2, 0, 0])
+            screw_mount(case_depth-wall_thickness);
+    }
+    if (handle) {
+        simpleHandle();
+    }
 }
 
 module lid(args) {
-    linear_extrude(height=case_wall_thickness)
+    lid_width = tablet_width-wall_thickness*2-print_clearance;
+    lid_height = tablet_height-wall_thickness-case_lid_lip-print_clearance+1;
+    linear_extrude(height=wall_thickness)
         difference() {  
-            // Main plate body          
-            square(size=[tablet_width, tablet_height-case_lid_lip]);
+            // Main plate body   
+            translate([print_clearance/2, print_clearance/2, 0])       
+                square(size=[lid_width, lid_height]);
             // Screw mount holes
             translate([screw_mount_width/2, screw_mount_width/2, 0])
-                circle(d=3);
-            translate([tablet_width-screw_mount_width/2, screw_mount_width/2, 0])
-                circle(d=3);
+                circle(d=heatset_bolt_diameter);
+            translate([lid_width+print_clearance-screw_mount_width/2, screw_mount_width/2, 0])
+                circle(d=heatset_bolt_diameter);
+            // Cheeseplate mount holes
+            translate([10+lid_width/2-(20.75+6.35)/2, 33.75, 0]){
+                circle(d=6.35);
+                translate([20.75+6.35, 0, 0])
+                    circle(d=6.35);
+            }
+            // V mount holes
+            // translate([lid_width/2+(20.75+6.35)+10, lid_height/2-(45.35/2), 0]){
+            translate([19, 36, 0]){
+                circle(d=4);
+                translate([25.7+4, 0, 0])
+                    circle(d=4);
+                translate([25.7+4, 45.35+4, 0])
+                    circle(d=4);
+                translate([0, 45.35+4, 0])
+                    circle(d=4);
+            }
         }
     // Lid lip
-    // magic number 5 is to make the lip attach to the body
-    translate([case_wall_thickness, tablet_height-case_lid_lip-5, -case_wall_thickness])
-        linear_extrude(height=case_wall_thickness)
-            square(size=[tablet_width-case_wall_thickness*2, case_lid_lip+5]);
+    translate([wall_thickness, tablet_height-wall_thickness-2-case_lid_lip-lip_overlap-print_clearance, -wall_thickness])
+        cube(size=[tablet_width-wall_thickness*4, case_lid_lip+lip_overlap, wall_thickness]);
 
 }
 
 module midplate(args) {
-    midplate_height = tablet_height-(border_width+mx_width)-screw_mount_width/2;
-    linear_extrude(height=case_wall_thickness)
+    linear_extrude(height=wall_thickness)
         difference() {            
-            // Main plate body          
-            square(size=[tablet_width-case_wall_thickness*2, midplate_height]);
+            // Main plate body
+            square(size=[tablet_width-wall_thickness*2-print_clearance, midplate_height-print_clearance]);
             // Screw mount holes
-            translate([screw_mount_width/2, screw_mount_width/2, 0])
-                circle(d=3);
-            translate([tablet_width-case_wall_thickness*2-screw_mount_width/2, screw_mount_width/2, 0])
-                circle(d=3);
-            translate([10, 5, 0])
-                screen_holes(1);
+            translate([screw_mount_width/2-print_clearance/2, screw_mount_width/2, 0])
+                circle(d=heatset_bolt_diameter);
+            translate([tablet_width-wall_thickness*2-screw_mount_width/2-print_clearance, screw_mount_width/2, 0])
+                circle(d=heatset_bolt_diameter);
+            translate([5,magic_midplate_screw_height+3, 0])
+                screen_holes(2.5);
         }
     // Lid lip
-    // magic number 5 is to make the lip attach to the body
-    translate([0, midplate_height-5, case_wall_thickness])
-        linear_extrude(height=midplate_tab_height)
-            square(size=[midplate_tab_width, midplate_tab_depth+5]);
-    translate([tablet_width-case_wall_thickness*2-midplate_tab_width, midplate_height-5, case_wall_thickness])
-        linear_extrude(height=midplate_tab_height)
-            square(size=[midplate_tab_width, midplate_tab_depth+5]);
+    translate([0, midplate_height-lip_overlap, 0])
+        cube(size=[midplate_tab_width, midplate_tab_depth+lip_overlap, midplate_tab_height]);
+    translate([tablet_width-wall_thickness*2-print_clearance-midplate_tab_width, midplate_height-lip_overlap, 0])
+        cube(size=[midplate_tab_width, midplate_tab_depth+lip_overlap, midplate_tab_height]);
 
 }
 
 module screen_holes(screw_size=3) {
     translate([0, 0, 0])
-        circle(r=screw_size);
-    translate([0, 91.5, 0])
-        circle(r=screw_size);
-    translate([155, 91.5, 0])
-        circle(r=screw_size);
-    translate([155, 0, 0])
-        circle(r=screw_size);
+        circle(d=screw_size);
+    translate([0, 92, 0])
+        circle(d=screw_size);
+    translate([149.2+5.5, 92, 0])
+        circle(d=screw_size);
+    translate([149.2+5.5, 0, 0])
+        circle(d=screw_size);
+    // raspberry pi hole
     translate([27, 8, 0])
-        square(size=[92, 60]);
-    translate([112.5, 28.5])
-        square(size=[25, 17]);
+        square(size=[92, 62]);
+    // ribbon cable hole
+    translate([112.5, 8])
+        square(size=[25, 40]);
 }
 
-module screen(){
+module screen(opacity = 1){
     // screen screw mounts
-    translate([5, 5, screen_body_height])
+    translate([2.37+5.5/2, 2.31+5.5/2, screen_body_height])
         linear_extrude(height=screen_screw_height)
-            screen_holes();
-    // basic raspberry pi 3 model b + ribbon cable
-    // translate([5, 5, screen_body_height])
-    //     linear_extrude(height=26)
-    //         translate([15, 5.5, 0])
-    //             square(size=[125, 62]);
+            screen_holes(5.5);
     // ribbon cable
     translate([122-4.5, 33.5, screen_body_height])
-        cube(size=[25, 17, 26]);
+        cube(size=[25, 17, 25]);
     // screen body
-    difference() {
-        cube(size=[165, 102, screen_body_height]);
-        // screen viewing area
-        translate([7, 11, 0])
-            cube(size=[154.25, 86.5, 1]);
-    }
+    color("green", opacity)
+        difference() {
+            cube(size=[screen_width, screen_height, screen_body_height]);
+            // screen viewing area
+            translate([7, 11, 0])
+                cube(size=[154.25, 86.5, 1]);
+        }
     // advanced raspberry pi 3 model b
     translate([122, 13.5,screen_body_height+7.85 ])
         rotate([0, 0, 90])
@@ -206,42 +280,27 @@ module screen(){
 module assembly(explode = false, opacity = 1) {
     if (explode) {
         color("orange", opacity)
-            body();
+            body(false, true);
         color("purple", opacity)
-            translate([200, border_width+mx_width-case_wall_thickness+screw_mount_width/2, midplate_mount_height])
+            translate([200, midplate_screw_height, midplate_mount_height])
                 midplate();
-        // color("green", opacity)
-            translate([400, border_width+mx_width-case_wall_thickness+screw_mount_width/2, case_wall_thickness])
-                screen();
+        translate([400, midplate_screw_height+wall_thickness+6, wall_thickness/2+print_clearance])
+            screen(opacity);
         color("blue", opacity)
-            translate([-200, 0, case_depth])
+            translate([-200, wall_thickness, case_depth-wall_thickness])
                 lid();
     } else {
         color("orange", opacity)
-            body();
-        translate([case_wall_thickness, border_width+mx_width-case_wall_thickness+screw_mount_width/2, 0]) {
-            color("purple", opacity)
-                translate([0,0, midplate_mount_height])
-                    midplate();
-            color("green", opacity)
-                translate([5,0, case_wall_thickness])
-                    screen();
-        }
-        translate([0, 0, case_depth])
+            body(false, true);
+        color("purple", opacity)
+            translate([wall_thickness+print_clearance/2, midplate_screw_height, midplate_mount_height])
+                midplate();
+        translate([ wall_thickness+print_clearance/2, midplate_screw_height+wall_thickness+7.5, wall_thickness/2+print_clearance])
+            screen(opacity);
+        translate([wall_thickness, wall_thickness, case_depth-wall_thickness])
             color("blue", opacity)
                 lid();
     }
 }
 
-assembly(exploded, 0.5);
-
-// Todo
-// make screw mounts fit heatset inserts with proper depth and diameter
-// add tolerances to tabs and plates
-// set screen into front of case
-// tighter tolerances around the screen and switches
-// add battery to model
-// round corners
-// add handle
-// add cheese plate
-// add battery mount
+assembly(true);
