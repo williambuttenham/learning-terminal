@@ -1,10 +1,5 @@
 // OpenSCAD version 2021.01 
 
-// Library for raspberry pi model: https://github.com/RigacciOrg/openscad-rpi-library
-// include <common\openscad-rpi-library-master\openscad-rpi-library-master\misc_boards.scad>
-// https://danielupshaw.com/openscad-rounded-corners/
-include <roundedcube.scad>
-
 $fn = 70;
 nozzle_diameter = 0.4;
 screen_viewport_width = 154.25;
@@ -82,9 +77,9 @@ module simpleHandle(args) {
     difference() {
         union(){
             translate([body_corner_radius, tablet_height-body_corner_radius, case_depth/2-(handle_diameter+wall_thickness+wall_thickness)/2])
-                roundedcube(size=[ handle_diameter, handle_diameter*2+wall_thickness+wall_thickness+body_corner_radius, handle_diameter+wall_thickness+wall_thickness], radius=body_corner_radius);
+                cube(size=[ handle_diameter, handle_diameter*2+wall_thickness+wall_thickness+body_corner_radius, handle_diameter+wall_thickness+wall_thickness]);
             translate([tablet_width-handle_diameter-body_corner_radius, tablet_height-body_corner_radius, case_depth/2-(handle_diameter+wall_thickness+wall_thickness)/2])
-                roundedcube(size=[ handle_diameter, handle_diameter*2+wall_thickness+wall_thickness+body_corner_radius, handle_diameter+wall_thickness+wall_thickness], radius=body_corner_radius);
+                cube(size=[ handle_diameter, handle_diameter*2+wall_thickness+wall_thickness+body_corner_radius, handle_diameter+wall_thickness+wall_thickness]);
         }
         translate([0, tablet_height+handle_diameter*1.5+wall_thickness, case_depth/2])
             rotate([0, 90, 0])
@@ -270,10 +265,6 @@ module screen(opacity = 1){
             translate([7, 11, 0])
                 cube(size=[154.25, 86.5, 1]);
         }
-    // // advanced raspberry pi 3 model b
-    // translate([122, 13.5,screen_body_height+7.85 ])
-    //     rotate([0, 0, 90])
-    //         board_raspberrypi_3_model_b();
 
 }
 
